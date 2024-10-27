@@ -2,8 +2,10 @@ import React, { useEffect, useState } from "react";
 
 type Prefecture = { prefCode: number; prefName: string };
 
-function PrefectureList() {
+function useFetchPrefectures() {
   const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPrefectures = async () => {
@@ -16,22 +18,52 @@ function PrefectureList() {
             },
           }
         );
+        if (!response.ok) throw new Error("Network response was not ok");
         const data = await response.json();
         setPrefectures(data.result);
-      } catch (error) {
-        console.error("Error fetching prefectures:", error);
+      } catch (err) {
+        setError("Failed to fetch prefectures");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchPrefectures();
   }, []);
 
+  return { prefectures, loading, error };
+}
+
+function PrefectureList() {
+  const { prefectures, loading, error } = useFetchPrefectures();
+  const [selectedPrefs, setSelectedPrefs] = useState<number[]>([]);
+
+  const handleCheckboxChange = (prefCode: number) => {
+    setSelectedPrefs((prev) =>
+      prev.includes(prefCode)
+        ? prev.filter((code) => code !== prefCode)
+        : [...prev, prefCode]
+    );
+  };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>{error}</p>;
+
   return (
     <div>
       <h1>Prefectures</h1>
       <ul>
         {prefectures.map((prefecture) => (
-          <li key={prefecture.prefCode}>{prefecture.prefName}</li>
+          <li key={prefecture.prefCode}>
+            <label>
+              <input
+                type="checkbox"
+                checked={selectedPrefs.includes(prefecture.prefCode)}
+                onChange={() => handleCheckboxChange(prefecture.prefCode)}
+              />
+              {prefecture.prefName}
+            </label>
+          </li>
         ))}
       </ul>
     </div>
